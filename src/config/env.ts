@@ -1,0 +1,1 @@
+export const JWT_SECRET="PitchSide_JWT_Secret_2026_Development";
