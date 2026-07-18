@@ -100,3 +100,37 @@ export const register = async(req: Request, res: Response) =>{
         });
     }
 };
+
+export const me = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.userId;
+
+        const user = await prisma.user.findUnique({
+            where: {
+                user_id: userId
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found."
+            });
+        }
+
+        return res.status(200).json({
+            user: {
+                user_id: user.user_id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                profile_picture: user.profile_picture,
+                bio: user.bio
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: "Internal server error."
+        });
+    }
+};
