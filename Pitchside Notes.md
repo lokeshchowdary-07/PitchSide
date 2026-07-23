@@ -88,3 +88,45 @@ Sessions require persistent server-side storage (Redis or DB-backed) to survive 
 
 JWT was already the planned auth approach in the V1 stack (Express + Prisma + Socket.io), so this is a confirmation of an existing architectural choice rather than an added dependency.
 
+
+
+
+
+
+
+1. creating player - player details
+2. creating team - including players, other details of team
+3. creating match - including team, including player, listing balls \[with all properties0], making a score card {might be even more complex}
+4. after match - update player stats, update team stats {automatic}
+
+
+
+
+
+
+
+# 
+
+# NEW IDEAS :
+
+
+
+1. including a group chat place \[eliminates communication disturbances rather than calls and whatsapps, includes polls, news, macth notifications etc]
+2. match challenges, approvals, match making stuff after project grows
+3. ai chat bot for specific things
+4. ai decision making during match like an umpire, 
+5. ai visualisation and post match analysis
+6. ML model for pre match predictions 
+
+
+
+
+
+
+
+* ## Backend
+
+
+
+
+

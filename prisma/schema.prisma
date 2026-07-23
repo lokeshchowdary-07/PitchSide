@@ -28,11 +28,10 @@ model Player_profile {
   user_id String? @unique
 
   player_name    String
-  player_role    String
+  player_role    PlayerRole
   specialization String?
-  batting_style  String?
-  bowling_style  String?
-  dominant_hand  String?
+  batting_style  BattingStyle?
+  bowling_style  BowlingStyle @default(NONE)
   rating         Int     @default(0)
 
   user User? @relation(fields: [user_id], references: [user_id])
@@ -72,14 +71,17 @@ model TeamMember {
   team_id   String
   player_id String
 
-  role_team String
+  role_team TeamRole @default(MEMBER)
+  status MembershipStatus @default(PENDING)
 
-  joined_at DateTime  @default(now())
+  requested_role    TeamRole?
+  role_requested_at DateTime?
+
+  requested_at DateTime  @default(now())
+  joined_at DateTime?  
   left_at   DateTime?
 
-  is_active Boolean @default(true)
-
-  team Team @relation(fields: [team_id], references: [team_id])
+  team Team @relation(fields: [team_id], references: [team_id], onDelete: Cascade)
 
   player_profile Player_profile @relation(fields: [player_id], references: [player_id])
 
@@ -243,4 +245,47 @@ model TeamStat {
   run_outs  Int @default(0)
 
   team Team @relation(fields: [team_id], references: [team_id])
+}
+
+enum BattingStyle {
+  RIGHT_HANDED
+  LEFT_HANDED
+}
+
+enum BowlingStyle {
+  RIGHT_ARM_FAST
+  RIGHT_ARM_MEDIUM
+  RIGHT_ARM_OFFBREAK
+  RIGHT_ARM_LEGBREAK
+  LEFT_ARM_FAST
+  LEFT_ARM_MEDIUM
+  LEFT_ARM_ORTHODOX
+  LEFT_ARM_CHINAMAN
+  NONE
+}
+
+enum PlayerRole {
+  BATSMAN
+  BOWLER
+  ALL_ROUNDER
+  WICKET_KEEPER
+}
+
+enum DominantHand{
+  LEFT_HANDED
+  RIGHT_HANDED
+}
+
+enum TeamRole {
+  CAPTAIN
+  VICE_CAPTAIN
+  MEMBER
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  LEFT
+  REMOVED
 }
