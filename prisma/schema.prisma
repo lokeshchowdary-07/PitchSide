@@ -56,6 +56,7 @@ model Team {
 
   created_at DateTime @default(now())
 
+  is_temporary Boolean @default(false)
   team_members        TeamMember[]
   player_match_stats  PlayerMatchStat[]
   batting_innings     InningStat[]      @relation("batting_team")
@@ -89,14 +90,15 @@ model TeamMember {
 }
 
 model Match {
-  match_id       String    @id @default(uuid())
+  match_id          String        @id @default(uuid())
+  match_type        MatchType     @default(FORMAL)
   team1_id       String
   team2_id       String
-  match_format   String
+  match_format   MatchFormat
   overs          Int
-  status         String
+  status         MatchStatus  @default(PENDING)
   toss_winner    String?
-  toss_decision  String?
+  toss_decision  TossDecision?
   winner         String?
   scheduled_time DateTime
   start_time     DateTime?
@@ -197,6 +199,7 @@ model PlayerStat {
 
 model InningStat {
   innings_id String @id @default(uuid())
+  innings_number Int
 
   match_id String
 
@@ -288,4 +291,37 @@ enum MembershipStatus {
   REJECTED
   LEFT
   REMOVED
+}
+
+enum MatchFormat {
+  T20
+  ODI
+  TEST
+  CUSTOM
+}
+
+enum TossDecision {
+  BAT
+  BOWL
+}
+
+enum MatchType {
+  FORMAL
+  PRACTICE
+}
+
+enum MatchStatus {
+  PENDING      
+  SCHEDULED    
+  LIVE
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum ResultType {
+  WON_BY_RUNS
+  WON_BY_WICKETS
+  TIE
+  NO_RESULT
 }

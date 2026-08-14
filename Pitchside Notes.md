@@ -114,9 +114,9 @@ JWT was already the planned auth approach in the V1 stack (Express + Prisma + So
 1. including a group chat place \[eliminates communication disturbances rather than calls and whatsapps, includes polls, news, macth notifications etc]
 2. match challenges, approvals, match making stuff after project grows
 3. ai chat bot for specific things
-4. ai decision making during match like an umpire, 
+4. ai decision making during match like an umpire,
 5. ai visualisation and post match analysis
-6. ML model for pre match predictions 
+6. ML model for pre match predictions
 
 
 
@@ -124,7 +124,27 @@ JWT was already the planned auth approach in the V1 stack (Express + Prisma + So
 
 
 
-* ## Backend
+* ## Backend :
+
+### 
+
+### Player Routes and Functions:
+
+### 
+
+### Team Routes and Functions:
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
