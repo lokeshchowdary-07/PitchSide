@@ -137,6 +137,8 @@ model Ball {
   is_penalty          Boolean @default(false)
   is_freehit          Boolean @default(false)
 
+  created_at DateTime @default(now())
+
   match            Match           @relation(fields: [match_id], references: [match_id])
   striker          Player_profile  @relation("striker", fields: [striker_id], references: [player_id])
   non_striker      Player_profile  @relation("non_striker", fields: [non_striker_id], references: [player_id])
@@ -202,6 +204,8 @@ model InningStat {
   innings_number Int
 
   match_id String
+
+  status InningsStatus @default(IN_PROGRESS)
 
   batting_team_id String
   bowling_team_id String
@@ -324,4 +328,9 @@ enum ResultType {
   WON_BY_WICKETS
   TIE
   NO_RESULT
+}
+
+enum InningsStatus {
+  IN_PROGRESS
+  COMPLETED
 }
