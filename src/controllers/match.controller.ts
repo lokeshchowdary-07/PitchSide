@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { aggregatePostMatchStats } from "../utils/statAggregation.utils";
 
 const prisma = new PrismaClient();
 
@@ -207,7 +208,7 @@ export const endMatch = async (req: Request, res: Response) => {
     if (innings.length < 2) {
       result_type = "NO_RESULT";
     } else {
-      const [first, second] = innings; // first = batted first, second = chased
+      const [first, second] = innings;
       if (first.total_runs > second.total_runs) {
         winner = first.batting_team_id;
         result_type = "WON_BY_RUNS";
@@ -215,18 +216,25 @@ export const endMatch = async (req: Request, res: Response) => {
       } else if (second.total_runs > first.total_runs) {
         winner = second.batting_team_id;
         result_type = "WON_BY_WICKETS";
-        result_margin = Math.max(0, 10 - second.total_wickets); // assumes 10-wicket-per-side; revisit for smaller squads
+        const squadSize = await prisma.teamMember.count({ where: { team_id: second.batting_team_id, status: "ACTIVE" } });
+        result_margin = Math.max(0, (squadSize - 1) - second.total_wickets);
       } else {
         result_type = "TIE";
       }
     }
 
-    const updated = await prisma.match.update({
-      where: { match_id: match.match_id },
-      data: { status: "COMPLETED", end_time: new Date(), winner, result_type, result_margin, potm_player_id: potm_player_id ?? null },
+    const updatedMatch = await prisma.$transaction(async (tx) => {
+      const m = await tx.match.update({
+        where: { match_id: match.match_id },
+        data: { status: "COMPLETED", end_time: new Date(), winner, result_type, result_margin, potm_player_id: potm_player_id ?? null },
+      });
+
+      await aggregatePostMatchStats(tx, m, innings);
+
+      return m;
     });
 
-    return res.status(200).json({ message: "Match ended.", match: updated });
+    return res.status(200).json({ message: "Match ended.", match: updatedMatch });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error." });
   }

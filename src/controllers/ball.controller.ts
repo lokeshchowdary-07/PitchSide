@@ -49,7 +49,7 @@ export const scoreBall = async (req: Request, res: Response) => {
     const over_no = Math.floor(legalBallsSoFar / 6);
     const ball_no = (legalBallsSoFar % 6) + 1;
 
-    // extras logic (simplified model — see note below)
+    // extras logic (simplified model)
     const is_wide = extra_type === "WIDE";
     const is_noball = extra_type === "NOBALL";
     const is_penalty = extra_type === "PENALTY";
@@ -61,7 +61,7 @@ export const scoreBall = async (req: Request, res: Response) => {
     const batsmen_runs = (!extra_type || is_noball) ? runs : 0;
     const extra_runs = is_wide || is_noball ? 1 + (is_noball ? 0 : runs) : (is_bye || is_legbye || is_penalty ? runs : 0);
 
-    // free hit propagates from the previous delivery, ordered by actual insert time (over/ball numbers can repeat across wides)
+    // free hit propagates from the previous delivery, ordered by actual insert time
     const previousBall = await prisma.ball.findFirst({ where: { innings_id }, orderBy: { created_at: "desc" } });
     const is_freehit = previousBall?.is_noball ?? false;
 
@@ -90,7 +90,8 @@ export const scoreBall = async (req: Request, res: Response) => {
 
       const updatedInnings = await tx.inningStat.update({ where: { innings_id }, data: inningsUpdateData });
 
-      await tx.playerMatchStat.upsert({
+      // capture the upsert results instead of discarding them — needed for the socket payload below
+      const strikerStat = await tx.playerMatchStat.upsert({
         where: { match_id_player_id: { match_id: match.match_id, player_id: striker_id } },
         create: {
           match_id: match.match_id, player_id: striker_id, team_id: innings.batting_team_id,
@@ -114,7 +115,7 @@ export const scoreBall = async (req: Request, res: Response) => {
 
       const runsConcededToBowler = (is_bye || is_legbye) ? 0 : batsmen_runs + extra_runs;
       const wicketCreditsBowler = is_wicket && dismissal_type !== "RUN_OUT" && dismissal_type !== "RETIRED_OUT";
-      await tx.playerMatchStat.upsert({
+      const bowlerStat = await tx.playerMatchStat.upsert({
         where: { match_id_player_id: { match_id: match.match_id, player_id: bowler_id } },
         create: {
           match_id: match.match_id, player_id: bowler_id, team_id: innings.bowling_team_id,
@@ -128,6 +129,7 @@ export const scoreBall = async (req: Request, res: Response) => {
         },
       });
 
+      let fielderStat = null;
       if (is_wicket && fielder_id) {
         const field =
           dismissal_type === "CAUGHT" ? "catches" :
@@ -135,7 +137,7 @@ export const scoreBall = async (req: Request, res: Response) => {
           dismissal_type === "RUN_OUT" ? "run_outs" : null;
 
         if (field) {
-          await tx.playerMatchStat.upsert({
+          fielderStat = await tx.playerMatchStat.upsert({
             where: { match_id_player_id: { match_id: match.match_id, player_id: fielder_id } },
             create: { match_id: match.match_id, player_id: fielder_id, team_id: innings.bowling_team_id, [field]: 1 },
             update: { [field]: { increment: 1 } },
@@ -143,7 +145,7 @@ export const scoreBall = async (req: Request, res: Response) => {
         }
       }
 
-      // auto-close the innings: all out (using actual squad size, not a hardcoded 11) or overs complete
+      // auto-close the innings: all out (actual squad size, not hardcoded 11) or overs complete
       const squadSize = await tx.teamMember.count({ where: { team_id: innings.batting_team_id, status: "ACTIVE" } });
       const allOut = updatedInnings.total_wickets >= squadSize - 1;
       const oversComplete = updatedInnings.total_balls >= match.overs * 6;
@@ -152,11 +154,34 @@ export const scoreBall = async (req: Request, res: Response) => {
         await tx.inningStat.update({ where: { innings_id }, data: { status: "COMPLETED" } });
       }
 
-      return { ball, innings: updatedInnings, inningsClosed: allOut || oversComplete };
+      return {
+        ball, innings: updatedInnings, inningsClosed: allOut || oversComplete,
+        strikerStat, bowlerStat, fielderStat,
+      };
     });
-    
 
-    return res.status(201).json({ message: "Ball recorded.", ...result });
+    // --- build the live payload once, use it for both the socket broadcast and the HTTP response
+    const oversJustCompleted = is_legal_delivery && result.innings.total_balls % 6 === 0;
+    const runsRunThisBall = is_bye || is_legbye ? extra_runs : batsmen_runs;
+    const strikeShouldSwap = (runsRunThisBall % 2 === 1) !== oversJustCompleted;
+
+    const livePayload = {
+      innings_id,
+      total_runs: result.innings.total_runs,
+      total_wickets: result.innings.total_wickets,
+      overs: `${Math.floor(result.innings.total_balls / 6)}.${result.innings.total_balls % 6}`,
+      last_ball: { over_no, ball_no, runs: batsmen_runs, extra_type, is_wicket },
+      striker: result.strikerStat,
+      bowler: result.bowlerStat,
+      fielder: result.fielderStat,
+      strikeShouldSwap,
+      oversJustCompleted,
+      inningsClosed: result.inningsClosed,
+    };
+
+    getIO().to(`match:${match.match_id}`).emit("ball_scored", livePayload);
+
+    return res.status(201).json({ message: "Ball recorded.", ...result, ...livePayload });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal server error." });
