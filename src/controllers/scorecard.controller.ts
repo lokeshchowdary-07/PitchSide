@@ -72,8 +72,8 @@ export const getScorecard = async (req: Request, res: Response) => {
       status: match.status,
       team1: match.team1.team_name,
       team2: match.team2.team_name,
-      //result_type: match.result_type,
-      //result_margin: match.result_margin,
+      result_type: match.result_type,
+      result_margin: match.result_margin,
       winner: match.winner,
       innings: scorecard,
     });

@@ -15,7 +15,6 @@ model User {
   password String
 
   phone String?
-
   profile_picture String?
   bio             String?
 
@@ -24,15 +23,14 @@ model User {
 
 model Player_profile {
   player_id String @id @default(uuid())
-
-  user_id String? @unique
+  user_id   String? @unique
 
   player_name    String
   player_role    PlayerRole
   specialization String?
   batting_style  BattingStyle?
   bowling_style  BowlingStyle @default(NONE)
-  rating         Int     @default(0)
+  rating         Int @default(0)
 
   user User? @relation(fields: [user_id], references: [user_id])
 
@@ -50,73 +48,77 @@ model Player_profile {
 model Team {
   team_id String @id @default(uuid())
 
-  team_name   String
-  logo        String?
-  description String?
+  team_name    String
+  logo         String?
+  description  String?
+  is_temporary Boolean @default(false)
 
   created_at DateTime @default(now())
 
-  is_temporary Boolean @default(false)
   team_members        TeamMember[]
-  player_match_stats  PlayerMatchStat[]
-  batting_innings     InningStat[]      @relation("batting_team")
-  bowling_innings     InningStat[]      @relation("bowling_team")
-  team1_matches       Match[]           @relation("team1")
-  team2_matches       Match[]           @relation("team2")
-  toss_winner_matches Match[]           @relation("toss_winner")
-  winner_matches      Match[]           @relation("winner_team")
-  team_stat           TeamStat?
+  player_match_stats   PlayerMatchStat[]
+  batting_innings      InningStat[] @relation("batting_team")
+  bowling_innings      InningStat[] @relation("bowling_team")
+  team1_matches        Match[]      @relation("team1")
+  team2_matches        Match[]      @relation("team2")
+  toss_winner_matches  Match[]      @relation("toss_winner")
+  winner_matches       Match[]      @relation("winner_team")
+  challenger_matches   Match[]      @relation("challenger")
+  team_stat            TeamStat?
 }
 
 model TeamMember {
   team_id   String
   player_id String
 
-  role_team TeamRole @default(MEMBER)
-  status MembershipStatus @default(PENDING)
+  role_team TeamRole         @default(MEMBER)
+  status    MembershipStatus @default(PENDING)
 
   requested_role    TeamRole?
   role_requested_at DateTime?
 
   requested_at DateTime  @default(now())
-  joined_at DateTime?  
-  left_at   DateTime?
+  joined_at    DateTime?
+  left_at      DateTime?
 
-  team Team @relation(fields: [team_id], references: [team_id], onDelete: Cascade)
-
+  team           Team           @relation(fields: [team_id], references: [team_id], onDelete: Cascade)
   player_profile Player_profile @relation(fields: [player_id], references: [player_id])
 
   @@id([team_id, player_id])
 }
 
 model Match {
-  match_id          String        @id @default(uuid())
-  match_type        MatchType     @default(FORMAL)
-  team1_id       String
-  team2_id       String
-  match_format   MatchFormat
-  overs          Int
-  status         MatchStatus  @default(PENDING)
-  toss_winner    String?
-  toss_decision  TossDecision?
-  winner         String?
-  scheduled_time DateTime
-  start_time     DateTime?
-  end_time       DateTime?
-  potm_player_id String?
+  match_id           String       @id @default(uuid())
+  match_type         MatchType    @default(FORMAL)
+  team1_id           String
+  team2_id           String
+  challenger_team_id String?
+  match_format       MatchFormat
+  overs              Int
+  status             MatchStatus  @default(PENDING)
+  toss_winner        String?
+  toss_decision      TossDecision?
+  winner             String?
+  result_type        ResultType?
+  result_margin      Int?
+  scheduled_time     DateTime
+  start_time         DateTime?
+  end_time           DateTime?
+  potm_player_id     String?
 
   balls               Ball[]
   player_match_stats  PlayerMatchStat[]
   innings             InningStat[]
-  team1               Team              @relation("team1", fields: [team1_id], references: [team_id])
-  team2               Team              @relation("team2", fields: [team2_id], references: [team_id])
-  potm_player_profile Player_profile?   @relation("potm", fields: [potm_player_id], references: [player_id])
-  toss_winner_team    Team?             @relation("toss_winner", fields: [toss_winner], references: [team_id])
-  winner_team         Team?             @relation("winner_team", fields: [winner], references: [team_id])
+  team1               Team            @relation("team1", fields: [team1_id], references: [team_id])
+  team2               Team            @relation("team2", fields: [team2_id], references: [team_id])
+  challenger_team     Team?           @relation("challenger", fields: [challenger_team_id], references: [team_id])
+  potm_player_profile Player_profile? @relation("potm", fields: [potm_player_id], references: [player_id])
+  toss_winner_team    Team?           @relation("toss_winner", fields: [toss_winner], references: [team_id])
+  winner_team         Team?           @relation("winner_team", fields: [winner], references: [team_id])
 }
 
 model Ball {
-  ball_id             String  @id @default(uuid())
+  ball_id             String   @id @default(uuid())
   match_id            String
   innings_id          String
   over_no             Int
@@ -124,20 +126,19 @@ model Ball {
   striker_id          String
   non_striker_id      String
   bowler_id           String
-  is_wicket           Boolean @default(false)
+  is_wicket           Boolean  @default(false)
   dismissal_type      String?
   fielder_id          String?
   dismissed_player_id String?
-  is_legal_delivery   Boolean @default(true)
-  batsmen_runs        Int     @default(0)
+  is_legal_delivery   Boolean  @default(true)
+  batsmen_runs        Int      @default(0)
   extra_type          String?
-  extra_runs          Int     @default(0)
-  is_noball           Boolean @default(false)
-  is_wide             Boolean @default(false)
-  is_penalty          Boolean @default(false)
-  is_freehit          Boolean @default(false)
-
-  created_at DateTime @default(now())
+  extra_runs          Int      @default(0)
+  is_noball           Boolean  @default(false)
+  is_wide             Boolean  @default(false)
+  is_penalty          Boolean  @default(false)
+  is_freehit          Boolean  @default(false)
+  created_at          DateTime @default(now())
 
   match            Match           @relation(fields: [match_id], references: [match_id])
   striker          Player_profile  @relation("striker", fields: [striker_id], references: [player_id])
@@ -166,11 +167,9 @@ model PlayerMatchStat {
   stumpings Int @default(0)
   run_outs  Int @default(0)
 
-  match Match @relation(fields: [match_id], references: [match_id])
-
+  match  Match          @relation(fields: [match_id], references: [match_id])
   player Player_profile @relation(fields: [player_id], references: [player_id])
-
-  team Team @relation(fields: [team_id], references: [team_id])
+  team   Team           @relation(fields: [team_id], references: [team_id])
 
   @@id([match_id, player_id])
 }
@@ -200,12 +199,10 @@ model PlayerStat {
 }
 
 model InningStat {
-  innings_id String @id @default(uuid())
+  innings_id     String        @id @default(uuid())
+  match_id       String
   innings_number Int
-
-  match_id String
-
-  status InningsStatus @default(IN_PROGRESS)
+  status         InningsStatus @default(IN_PROGRESS)
 
   batting_team_id String
   bowling_team_id String
@@ -215,7 +212,6 @@ model InningStat {
   total_balls   Int @default(0)
 
   total_extras Int @default(0)
-
   byes         Int @default(0)
   leg_byes     Int @default(0)
   wides        Int @default(0)
@@ -278,11 +274,6 @@ enum PlayerRole {
   WICKET_KEEPER
 }
 
-enum DominantHand{
-  LEFT_HANDED
-  RIGHT_HANDED
-}
-
 enum TeamRole {
   CAPTAIN
   VICE_CAPTAIN
@@ -297,6 +288,11 @@ enum MembershipStatus {
   REMOVED
 }
 
+enum MatchType {
+  FORMAL
+  PRACTICE
+}
+
 enum MatchFormat {
   T20
   ODI
@@ -304,23 +300,18 @@ enum MatchFormat {
   CUSTOM
 }
 
-enum TossDecision {
-  BAT
-  BOWL
-}
-
-enum MatchType {
-  FORMAL
-  PRACTICE
-}
-
 enum MatchStatus {
-  PENDING      
-  SCHEDULED    
+  PENDING
+  SCHEDULED
   LIVE
   COMPLETED
   REJECTED
   CANCELLED
+}
+
+enum TossDecision {
+  BAT
+  BOWL
 }
 
 enum ResultType {
